@@ -22,5 +22,4 @@ public class HelloWorldClient {
         channel.shutdown();
 
     }
-
 }

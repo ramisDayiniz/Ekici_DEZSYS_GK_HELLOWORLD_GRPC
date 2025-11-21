@@ -1,17 +1,29 @@
 import io.grpc.stub.StreamObserver;
 
-public class HelloWorldServiceImpl extends HelloWorldServiceGrpc.HelloWorldServiceImplBase {
+public class HelloWorldServiceImpl extends WarehouseServiceGrpc.WarehouseServiceImplBase {
 
     @Override
-    public void hello( Hello.HelloRequest request, StreamObserver<Hello.HelloResponse> responseObserver) {
+    public void sendWarehouseData(WarehouseOuterClass.WarehouseRequest request, StreamObserver<WarehouseOuterClass.WarehouseResponse> responseObserver) {
+        // Warehouse-Daten aus dem Request holen
+        WarehouseOuterClass.Warehouse warehouse = request.getData();
 
-        System.out.println("Handling hello endpoint: " + request.toString());
+        // Verarbeitung: z.B. ausgeben oder speichern
+        System.out.println("Received warehouse: " + warehouse.getWarehouseID());
+        System.out.println("Warehouse Name: " + warehouse.getWarehouseName());
+        System.out.println("Products:");
+        for (WarehouseOuterClass.ProductData product : warehouse.getProductsList()) {
+            System.out.println("- " + product.getProductName() + " (" + product.getProductQuantity() + ")");
+        }
 
-        String text = "Hello World, " + request.getFirstname() + " " + request.getLastname();
-        Hello.HelloResponse response = Hello.HelloResponse.newBuilder().setText(text).build();
+        // Antwort erstellen
+        WarehouseOuterClass.WarehouseResponse response = WarehouseOuterClass.WarehouseResponse.newBuilder()
+                .setMessage("Warehouse received successfully")
+                .build();
 
+        // Antwort senden und Stream abschließen
         responseObserver.onNext(response);
         responseObserver.onCompleted();
-
     }
 }
+
+
