@@ -88,8 +88,6 @@ implementation "io.grpc:grpc-stub:${grpcVersion}"    // Client/Server Stubs
 
 - **Practice:** Gradle automatically downloads and includes all libraries, no manual setup needed.
 
-
-
 ### Proto
 
 - **service HelloWorldService** → defines the gRPC service.
@@ -121,10 +119,6 @@ message HelloResponse {
 }
 ```
 
-
-
-
-
 ### HelloWorldServer
 
 The **gRPC server** waits for client requests and runs the defined service methods.  
@@ -132,7 +126,6 @@ It listens on a specific port (here: **50051**) and sends back responses.
 The server stays active until it’s stopped manually.
 
 ```java
-
     private static final int PORT = 50051;
     private Server server;
 
@@ -157,8 +150,6 @@ The server stays active until it’s stopped manually.
     }
 
 }
-
-
 ```
 
 - Starts a **gRPC server** on port **50051**.
@@ -171,10 +162,6 @@ The server stays active until it’s stopped manually.
 
 - **blockUntilShutdown()** → hält den Server am Laufen, bis er manuell beendet wird.
 
-
-
-
-
 ### HelloWorldClient
 
 - Connects to the gRPC server on **localhost:50051**.
@@ -186,8 +173,6 @@ The server stays active until it’s stopped manually.
 - Closes the connection after the response.
 
 ```java
-
-
 ManagedChannel channel = ManagedChannelBuilder.forAddress("localhost", 50051)
                 .usePlaintext()
                 .build();
@@ -213,10 +198,6 @@ ManagedChannel channel = ManagedChannelBuilder.forAddress("localhost", 50051)
 - **stub.hello(...)** → ruft die `hello`-Methode auf dem Server auf.
 
 - **channel.shutdown()** → beendet die Verbindung sauber.
-
-
-
-
 
 ### HelloWorldServiceImpl
 
@@ -247,13 +228,157 @@ the server processes the data and sends back a response message.
 
 - Sends the response back to the client with **onNext()**, then ends with **onCompleted()**.
 
-
-
-
-
-
-
 `python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. warehouse.proto`
+
+
+
+
+
+## DataWarehouse
+
+### Proto File
+
+To transfer a **DataWarehouse record**, the proto file must include a message that represents the full warehouse data:
+
+```python
+syntax = "proto3";
+
+service WarehouseService {
+  rpc SendWarehouseData(WarehouseRequest) returns (WarehouseResponse);
+}
+
+message ProductData {
+  string productID = 1;
+  string productName = 2;
+  string productCategory = 3;
+  string productUnit = 4;
+  int32 productQuantity = 5;
+}
+
+message Warehouse {
+  string warehouseID = 1;
+  string warehouseName = 2;
+  string timestamp = 3;
+  string warehouseAddress = 4;
+  string warehousePostalCode = 5;
+  string warehouseCity = 6;
+  string warehouseCountry = 7;
+  repeated ProductData products = 8;
+}
+
+message WarehouseRequest {
+  Warehouse data = 1;
+}
+
+message WarehouseResponse {
+  string message = 1;
+}
+```
+
+- `WarehouseRequest` now directly contains a `Warehouse` object.
+
+- `WarehouseResponse` contains a simple confirmation message.
+
+
+
+### Server
+
+The server now receives a `Warehouse` object from the client
+
+```java
+import io.grpc.Server;
+import io.grpc.ServerBuilder;
+
+import java.io.IOException;
+
+public class WarehouseServer {
+    public static void main(String[] args) throws IOException, InterruptedException {
+        Server server = ServerBuilder.forPort(50051)
+                .addService(new HelloWorldServiceImpl())
+                .build()
+                .start();
+        System.out.println("Server running on port 50051");
+        server.awaitTermination();
+    }
+}
+```
+
+- **Purpose:** Starts a gRPC server to handle RPC calls.
+
+- **Port:** Listens on **50051**.
+
+- **Service:** Registers `HelloWorldServiceImpl()` (this is the service implementation handling RPC requests).
+
+- **Behavior:**
+  
+  1. Builds and starts the server.
+  
+  2. Prints a message confirming the server is running.
+  
+  3. Keeps the server running indefinitely with `awaitTermination()`.
+
+
+
+### Client
+
+```python
+import grpc
+import warehouse_pb2
+import warehouse_pb2_grpc
+
+def run():
+    channel = grpc.insecure_channel('localhost:50051')
+    stub = warehouse_pb2_grpc.WarehouseServiceStub(channel)
+
+    warehouse = warehouse_pb2.Warehouse(
+        warehouseID="001",
+        warehouseName="Linz Bahnhof",
+        timestamp="2025-11-11 10:00:00",
+        warehouseAddress="Bahnhofsstrasse 27/9",
+        warehousePostalCode="Linz",
+        warehouseCity="Linz",
+        warehouseCountry="Austria",
+        products=[
+            warehouse_pb2.ProductData(
+                productID="00-443175",
+                productName="Bio Orangensaft Sonne",
+                productCategory="Getraenk",
+                productUnit="Packung 1L",
+                productQuantity=2500
+            ),
+            warehouse_pb2.ProductData(
+                productID="01-926885",
+                productName="Ariel Waschmittel Color",
+                productCategory="Waschmittel",
+                productUnit="Packung 3KG",
+                productQuantity=478
+            )
+        ]
+    )
+
+    # Request senden
+    response = stub.SendWarehouseData(
+        warehouse_pb2.WarehouseRequest(data=warehouse)
+    )
+    print("Server antwortet:", response.message)
+
+if __name__ == "__main__":
+    run()
+```
+
+- **Purpose:** Acts as a gRPC client to send a `Warehouse` record to the server.
+
+- **Connection:** Creates an insecure gRPC channel to **localhost:50051**.
+
+- **Stub:** Uses `WarehouseServiceStub` to call remote methods.
+
+- **Data:** Constructs a `Warehouse` object with two products.
+
+- **Request:** Sends the `Warehouse` object via `SendWarehouseData` RPC.
+
+- **Output:** Prints the server’s response message.
+
+
 
 
 
@@ -281,3 +406,19 @@ Start HelloWorldClient (Python)
 `python3 src/main/resources/helloWorldClient.py`  
 
 ## Quellen
+
+[1]  „What Is gRPC? | IBM“. Zugegriffen: 21.
+November 2025. [Online]. Verfügbar unter: https://www.ibm.com/think/topics/grpc
+
+[2]  „What is gRPC?“, GeeksforGeeks. Zugegriffen:
+21. November 2025. [Online]. Verfügbar unter:
+https://www.geeksforgeeks.org/software-engineering/what-is-grpc/
+
+[3]  „Introduction to gRPC“, gRPC. Zugegriffen: 21.
+November 2025. [Online]. Verfügbar unter:
+https://grpc.io/docs/what-is-grpc/introduction/
+
+[4]  D. Arney, „Building a Simple gRPC Client and
+Server with Spring Boot 3“, Medium. Zugegriffen: 21. November 2025. [Online].
+Verfügbar unter:
+https://medium.com/@dinesharney/building-a-simple-grpc-client-and-server-with-spring-boot-3-4672c1e4fab7
