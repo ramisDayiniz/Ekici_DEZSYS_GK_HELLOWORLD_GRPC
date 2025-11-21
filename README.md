@@ -253,6 +253,10 @@ the server processes the data and sends back a response message.
 
 
 
+`python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. warehouse.proto`
+
+
+
 ## Implementierung
 
 Start HelloWorldServer (Java)  
